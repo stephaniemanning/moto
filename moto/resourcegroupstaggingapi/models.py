@@ -108,7 +108,7 @@ class ResourceGroupsTaggingAPIBackend(BaseBackend):
         :rtype: moto.awslambda.models.LambdaBackend
         """
         return lambda_backends[self.account_id][self.region_name]
-    
+
     @property
     def cloudformation_backend(self):
         """
@@ -170,7 +170,7 @@ class ResourceGroupsTaggingAPIBackend(BaseBackend):
                 yield {"ResourceARN": "arn:aws:s3:::" + bucket.name, "Tags": tags}
 
         # CloudFormation
-        if not resource_type_filters or 'cloudformation:stack' in resource_type_filters:
+        if not resource_type_filters or "cloudformation:stack" in resource_type_filters:
             for stack in self.cloudformation_backend.stacks.values():
                 tags = format_tags(stack.tags)
                 if not tag_filter(tags):

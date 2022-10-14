@@ -1,5 +1,5 @@
 import boto3
-import json 
+import json
 import sure  # noqa # pylint: disable=unused-import
 from moto import mock_ec2
 from moto import mock_elbv2
@@ -13,40 +13,52 @@ from moto import mock_cloudformation
 from botocore.client import ClientError
 from tests import EXAMPLE_AMI_ID, EXAMPLE_AMI_ID2
 
+
 @mock_kms
 @mock_cloudformation
 @mock_resourcegroupstaggingapi
 def test_get_resources_cloudformation():
-    
+
     template = {
         "AWSTemplateFormatVersion": "2010-09-09",
-        "Resources": {
-            "test": {"Type": "AWS::S3::Bucket"}
-        }
+        "Resources": {"test": {"Type": "AWS::S3::Bucket"}},
     }
     template_json = json.dumps(template)
 
     cf_client = boto3.client("cloudformation", region_name="us-east-1")
-    
-    stack_one = cf_client.create_stack(StackName="stack-1", TemplateBody=template_json, Tags=[{'Key': 'tag', 'Value': 'one'}]).get('StackId')
-    stack_two = cf_client.create_stack(StackName="stack-2", TemplateBody=template_json, Tags=[{'Key': 'tag', 'Value': 'two'}]).get('StackId')
-    stack_three = cf_client.create_stack(StackName="stack-3", TemplateBody=template_json, Tags=[{'Key': 'tag', 'Value': 'three'}]).get('StackId')
+
+    stack_one = cf_client.create_stack(
+        StackName="stack-1",
+        TemplateBody=template_json,
+        Tags=[{"Key": "tag", "Value": "one"}],
+    ).get("StackId")
+    stack_two = cf_client.create_stack(
+        StackName="stack-2",
+        TemplateBody=template_json,
+        Tags=[{"Key": "tag", "Value": "two"}],
+    ).get("StackId")
+    stack_three = cf_client.create_stack(
+        StackName="stack-3",
+        TemplateBody=template_json,
+        Tags=[{"Key": "tag", "Value": "three"}],
+    ).get("StackId")
 
     rgta_client = boto3.client("resourcegroupstaggingapi", region_name="us-east-1")
-    
+
     resp = rgta_client.get_resources(TagFilters=[{"Key": "tag", "Values": ["one"]}])
     resp["ResourceTagMappingList"].should.have.length_of(1)
     resp["ResourceTagMappingList"][0]["ResourceARN"].should.contain(stack_one)
 
-    resp = rgta_client.get_resources(TagFilters=[{"Key": "tag", "Values": ["one", "three"]}])
+    resp = rgta_client.get_resources(
+        TagFilters=[{"Key": "tag", "Values": ["one", "three"]}]
+    )
     resp["ResourceTagMappingList"].should.have.length_of(2)
     resp["ResourceTagMappingList"][0]["ResourceARN"].should.contain(stack_one)
     resp["ResourceTagMappingList"][1]["ResourceARN"].should.contain(stack_three)
 
     kms_client = boto3.client("kms", region_name="us-east-1")
     kms_client.create_key(
-        KeyUsage="ENCRYPT_DECRYPT",
-        Tags=[{"TagKey": "tag", "TagValue": "two"}]
+        KeyUsage="ENCRYPT_DECRYPT", Tags=[{"TagKey": "tag", "TagValue": "two"}]
     )
 
     resp = rgta_client.get_resources(TagFilters=[{"Key": "tag", "Values": ["two"]}])
@@ -54,10 +66,14 @@ def test_get_resources_cloudformation():
     resp["ResourceTagMappingList"][0]["ResourceARN"].should.contain(stack_two)
     resp["ResourceTagMappingList"][1]["ResourceARN"].should.contain("kms")
 
-    resp = rgta_client.get_resources(ResourceTypeFilters=["cloudformation:stack"], TagFilters=[{"Key": "tag", "Values": ["two"]}])
+    resp = rgta_client.get_resources(
+        ResourceTypeFilters=["cloudformation:stack"],
+        TagFilters=[{"Key": "tag", "Values": ["two"]}],
+    )
     resp["ResourceTagMappingList"].should.have.length_of(1)
     resp["ResourceTagMappingList"][0]["ResourceARN"].should.contain(stack_two)
- 
+
+
 @mock_rds
 @mock_ec2
 @mock_resourcegroupstaggingapi
